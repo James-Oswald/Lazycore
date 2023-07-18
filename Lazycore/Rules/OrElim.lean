@@ -25,37 +25,38 @@ def InfrenceRule.OrElimValid [DecidableEq α] (φ ψ χ : NDFormula α)
   rw [Sequent.sat] at *;
   simp at *;
   intro H;
-  
-
-  
-
-
-  -- intros H;
-  -- apply Or.elim _ right_1 left_1;
-  -- apply Or.inl;
-  -- intro f fd;
-  -- cases fd;
-  -- {
-  --   apply H;
-  --   apply Or.inl;
-  --   apply Or.inr;
-  --   exact h;
-  -- };
-  -- {
-
-  -- }
-
-  
-  --apply left_1;
-  -- intro f fOr;
-  -- cases fOr;{
-  --   apply H;
-  --   apply Or.inl;
-  --   apply Or.inl;
-  --   exact h;
-  -- };{
-  --   rw [h];
-  --   apply Or.elim;
-  -- }
-  
-} 
+  have left_special :  (∀ (f : NDFormula α), f ∈ Χ → (i |=ₙ f))  := by {
+    intro f2 fe;
+    have H3 := H f2;
+    apply H3;
+    apply Or.inr;
+    exact fe;
+  }
+  rw [NDFormula.sat] at *;
+  have H3 := left left_special;
+  cases H3;{
+    apply left_1;
+    intros f fe;
+    cases fe;{
+      apply H;
+      apply Or.inl;
+      apply Or.inl;
+      exact h_1;
+    };{
+      rw [h_1];
+      exact h;
+    }
+  };{
+    apply right_1;
+    intros f fe;
+    cases fe;{
+      apply H;
+      apply Or.inl;
+      apply Or.inr;
+      exact h_1;
+    };{
+      rw [h_1];
+      exact h;
+    }
+  }
+}
