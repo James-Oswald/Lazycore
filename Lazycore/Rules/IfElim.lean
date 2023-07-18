@@ -8,7 +8,7 @@ def InfrenceRule.IfElim [DecidableEq α] (φ ψ : NDFormula α)
 InfrenceRule α := 
 ⟨[Γ ⊢ₛ φ →ₙ ψ, Δ ⊢ₛ φ], Γ ∪ Δ ⊢ₛψ, InfrenceRule.noRestrictions⟩
 
-def InfrenceRule.IfIntro.Valid [DecidableEq α] (φ ψ : NDFormula α)
+def InfrenceRule.IfElim.Valid [DecidableEq α] (φ ψ : NDFormula α)
 (Γ Δ : Multiset (NDFormula α)) :
 ⊨ᵢ (InfrenceRule.IfElim φ ψ Γ Δ)
 := by{
