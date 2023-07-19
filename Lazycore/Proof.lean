@@ -37,18 +37,20 @@ beq a b := a.justification == b.justification && a.formula == b.formula
 
 deriving instance DecidableEq for ProofNode
 
+-- A proof state coresponds to a partially verified proof
 -- α is the type of node IDs, must be comparable and hashable
 -- β is the type of proposition symbols
 structure ProofState (α β : Type) [BEq α] [Hashable α] [DecidableEq α] where
 nodes : Lean.HashMap α (ProofNode β)
 --links is in the form of a map from nodeIDs to the finite set of parents
 links : Lean.HashMap α (Array α)
---assumptions is an updated map that maps 
+--assumptions is an updated map that maps
 assumptions : Lean.HashMap α (Multiset (NDFormula β))
 
--- instance: BEq (Option (ProofNode β)) where
--- beq a b := 
-
+-- aditional hypothesis to add to this structure to make validation easier:
+-- all indicies in the keys of the hashmaps are valid
+-- the values in the links map are all valid for indexing into nodes
+-- the keys of assumptions are a subset ⊆ of the keys of nodes
 
 def verifyAssumption
   [BEq α] [Hashable α] [ToString α]
