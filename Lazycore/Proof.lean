@@ -39,77 +39,79 @@ deriving instance DecidableEq for ProofNode
 
 -- α is the type of node IDs, must be comparable and hashable
 -- β is the type of proposition symbols
-structure ProofState (α β : Type) [BEq α] [Hashable α] [DecidableEq β] where
+structure ProofState (α β : Type) [BEq α] [Hashable α] [DecidableEq α] where
 nodes : Lean.HashMap α (ProofNode β)
 --links is in the form of a map from nodeIDs to the finite set of parents
 links : Lean.HashMap α (Array α)
 --assumptions is an updated map that maps 
-assumptions : Lean.HashMap α (Multiset α)
+assumptions : Lean.HashMap α (Multiset (NDFormula β))
 
 -- instance: BEq (Option (ProofNode β)) where
 -- beq a b := 
 
 
-def verifyAssumption 
-  [BEq α] [Hashable α] [DecidableEq β]
+def verifyAssumption
+  [BEq α] [Hashable α] [ToString α]
+  [DecidableEq α] [DecidableEq β]
   (p : ProofState α β) (id : α) 
   : Sum String (ProofState α β) :=
 let nodeOpt := p.nodes.find? id;
-let parentsOpt := p.assumptions.find? id;
-if H1 : nodeOpt = Option.none ∨ parentsOpt = Option.none then
-  Sum.inl "Invalid Index"
-else
-  let node := nodeOpt.some_get (by{
-    simp [Option.isSome, H1] at *;
-    cases C : (Lean.HashMap.find? p.nodes id);
-    contradiction;
-    simp;
-  })
-  let parents := parentsOpt.some_get (by{
-    clear node;
-    simp [And.intro] at H1;
-    cases C : (Lean.HashMap.find? p.assumptions id);
-    contradiction;
-    simp;
-  })
-  if node.justification != Justification.Assumption then
-    Sum.inl "Not Justified as an Assumption"
-  else
+let parentsOpt := p.links.find? id;
+if let (some node, some parents) := (nodeOpt, parentsOpt) then
+  if node.justification = Justification.Assumption then
     if parents.size = 0 then
-      Sum.inr 
-      {p with assumptions := assumptions.insert id (InfrenceRule.Assumption node.formula).conclusion.anticendents} 
+        Sum.inr 
+        {p with assumptions := (Lean.HashMap.insert p.assumptions id 
+          (InfrenceRule.Assumption node.formula).conclusion.anticendents
+        )} 
     else
-      Sum.inl "Assumption has parents but should not"
+      Sum.inl s!"Assumption has {parents.size} parents but should not have any"
+  else
+    Sum.inl "Not Justified as an Assumption"
+else
+  Sum.inl s!"Invalid Index Proof Node index: {id}"
+  
+/-
+α is the type of node IDs
+β is the type of prop names on formulae 
+-/
+def verifyAndIntro
+  [BEq α] [Hashable α] [ToString α]
+  [DecidableEq α] [DecidableEq β]
+  (p : ProofState α β) (id : α)
+  : Sum String (ProofState α β) :=
+let nodeOpt := p.nodes.find? id;
+let parentsOpt := p.links.find? id;
+if let (some node, some parents) := (nodeOpt, parentsOpt) then
+  if node.justification = Justification.AndIntro then
+    if h : parents.size = 2 then
+      let leftId := (parents[0]'(by simp [h]))
+      let rightId := (parents[1]'(by simp [h]))
+      let leftParentOpt := p.nodes.find? leftId
+      let rightParentOpt := p.nodes.find? rightId
+      if let (some left, some right) := (leftParentOpt, rightParentOpt) then
+        if let NDFormula.and leftFormula rightFormula := node.formula then
+          if left.formula = leftFormula ∧ right.formula = rightFormula then
+            let leftParentAssumptionsOpt := p.assumptions.find? leftId
+            let rightParentAssumptionsOpt := p.assumptions.find? rightId
+            if let (some leftAssumptions, some rightAssumptions) := 
+              (leftParentAssumptionsOpt, rightParentAssumptionsOpt) then
+              Sum.inr 
+              {p with assumptions := (Lean.HashMap.insert p.assumptions id 
+                (InfrenceRule.AndIntro leftFormula rightFormula leftAssumptions rightAssumptions).conclusion.anticendents
+              )} 
+            else
+              Sum.inl "Non-existant parent node ID in assumptions map"
+          else 
+            Sum.inl "A parent formula does not match formula on the node"
+        else
+          Sum.inl "AndIntro node does not have And Formula"
+      else
+        Sum.inl "Non-existant parent node ID in links map"
+    else
+      Sum.inl s!"AndIntro node has {parents.size} parents but should have 2"
+  else
+    Sum.inl "Not Justified as an AndIntro"
+else
+  Sum.inl s!"Invalid Index Proof Node index: {id}"
 
-
--- NOTE: Use if-let instead of match with single case
-
--- def verify [DecidableEq α] (p : Proof idt α) (id : idt) : String ⊕ (Multiset (NDFormula α)) :=
--- let node := p.nodes id
--- let parents := p.links id
--- match node.justification with
--- | Assumption => verifyAssumption p id
--- | AndIntro =>
---   match node.formula with
---   | NDFormula.and leftFormula rightFormula => 
---     if h : parents.size = 2 then 
---       let leftId := (parents[0]'(by simp [h]))
---       let rightId := (parents[1]'(by simp [h]))
---       let leftNode := p.nodes leftId
---       let rightNode := p.nodes rightId
---       if leftFormula != leftNode.formula then
---         Sum.inl "Not Justified as AndIntro"
---       else
---         if rightFormula != rightNode.formula then 
---           Sum.inl "Not Justified as AndIntro"
---         else
---           match (verify p leftId), (verify p leftId) with
---           | Sum.inr Γ, Sum.inr Δ => 
---             Sum.inr (InfrenceRule.AndIntro leftFormula rightFormula Γ Δ).conclusion.anticendents
---           | Sum.inl ε, _ => Sum.inl ε
---           | _, Sum.inl ε => Sum.inl ε
---     else
---       Sum.inl "AndIntro node must have 2 parents but does not"
---   | _ => 
---     Sum.inl "AndIntro node must be a an And formula"
--- | _ => Sum.inl "Nope"
