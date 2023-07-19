@@ -2,7 +2,7 @@
 import Mathlib.Data.Multiset.Basic
 
 -- α is the type of identifiers
-inductive NDFormula (α : Type): Type
+inductive NDFormula (α : Type) where
 | prop : α -> NDFormula α
 | and : NDFormula α -> NDFormula α -> NDFormula α
 | or : NDFormula α -> NDFormula α -> NDFormula α
@@ -10,7 +10,8 @@ inductive NDFormula (α : Type): Type
 | imp : NDFormula α -> NDFormula α -> NDFormula α
 | iff : NDFormula α -> NDFormula α -> NDFormula α
 
-deriving instance DecidableEq for NDFormula
+
+-- Representational Conveninces ==========================================
 
 notation:max "¬ₙ" p:40 => NDFormula.not p
 infixr:35 " ∧ₙ " => NDFormula.and
@@ -20,26 +21,27 @@ infixr:25 " ->ₙ " => NDFormula.imp
 infixr:20 " ↔ₙ " => NDFormula.iff
 infixr:20 " <->ₙ " => NDFormula.iff
 
--- We might not need this
--- def NDFormula.beq [BEq α] (φ ψ : NDFormula α) : Bool :=
--- match φ, ψ with
--- | prop p, prop q => p == q
--- | and a b, and c d => NDFormula.beq a c && NDFormula.beq b d
--- | or a b, or c d => NDFormula.beq a c && NDFormula.beq b d
--- | imp a b, imp c d => NDFormula.beq a c && NDFormula.beq b d
--- | iff a b, iff c d => NDFormula.beq a c && NDFormula.beq b d
--- | not a, not b => NDFormula.beq a b
--- | _, _ => false
-
--- instance [BEq α] : BEq (NDFormula α) where
--- beq := NDFormula.beq
-
 /-
 Any type can be coerced to an atomic predicate of
 that type
 -/
 instance : Coe α (NDFormula α) where
 coe a := NDFormula.prop a
+
+def NDFormula.str [ToString α] (f : NDFormula α) : String :=
+match f with
+| .prop p => toString p
+| .and a b => str a ++ " ∧ₙ " ++ str b
+| .or a b => str a ++ " ∨ₙ " ++ str b
+| .not a => "¬ₙ" ++ str a
+| .imp a b => str a ++ " →ₙ " ++ str b
+| .iff a b => str a ++ " ↔ₙ " ++ str b
+
+instance [ToString α] : ToString (NDFormula α) where
+toString := NDFormula.str
+
+instance [ToString α] : Repr (NDFormula α) where
+reprPrec f _ := NDFormula.str f
 
 /-
 A standalone ND formula can be coreced
@@ -50,13 +52,31 @@ coe a := [a]
 
 /-
 A standalone ND formula can be coreced to a multiset of ND
-formulae with 1 elm
+formulae with 1 elmement
 -/
 instance : Coe (NDFormula α) (Multiset (NDFormula α)) where
 coe a := Multiset.ofList [a]
 
-/-
+-- Semantical Defintions ================================================
 
+
+def instNDFormulaBeq [BEq α] (φ ψ : NDFormula α) : Bool :=
+match φ, ψ with
+| .prop p, .prop q => p == q
+| .and a b, .and c d => instNDFormulaBeq a c && instNDFormulaBeq b d
+| .or a b, .or c d => instNDFormulaBeq a c && instNDFormulaBeq b d
+| .imp a b, .imp c d => instNDFormulaBeq a c && instNDFormulaBeq b d
+| .iff a b, .iff c d => instNDFormulaBeq a c && instNDFormulaBeq b d
+| .not a, .not b => instNDFormulaBeq a b
+| _, _ => false
+
+instance [BEq α] : BEq (NDFormula α) where
+  beq := instNDFormulaBeq
+
+deriving instance DecidableEq for NDFormula
+
+/-
+The definition of union for multisets of formulae
 -/
 instance [DecidableEq α] : Union (Multiset (NDFormula α)) where
   union := Multiset.union 
@@ -65,8 +85,8 @@ instance [DecidableEq α] : Union (Multiset (NDFormula α)) where
 Semantics for ND formulae, satisfiability under some assignment of 
 atomic propostions to truth values.
 -/
-def NDFormula.sat [DecidableEq α] (interpretation : α -> Prop) (formula : NDFormula α) 
-: Prop :=
+def NDFormula.sat [DecidableEq α] (interpretation : α -> Prop)
+  (formula : NDFormula α) : Prop :=
 let i := interpretation
 match formula with
   | prop a => interpretation a
