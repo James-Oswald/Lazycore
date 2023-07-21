@@ -15,12 +15,11 @@ restrictions : List (Sequent α) -> Sequent α -> Prop
 def InfrenceRule.noRestrictions : List (Sequent α) -> Sequent α -> Prop 
 := fun _ => (fun _ => True)
 
-/-
-We can construct an infrence rule as a pair with the premises and conclusion
-and provide InfrenceRule.noRestrictions as a default restriction
--/
-instance: Coe (Prod (List (Sequent α)) (Sequent α)) (InfrenceRule α) where
-coe a := ⟨a.fst, a.snd, InfrenceRule.noRestrictions⟩  
+--An infrence rule with no restrictions
+notation p " ⊢ᵢ " c => InfrenceRule.mk p c InfrenceRule.noRestrictions
+
+--An infrence rule with restrictions
+notation p " ⊢ᵢ " c " ∋ " r => InfrenceRule.mk p c r
 
 /-
 An infrence rule is satisfiable in some interpretation iff

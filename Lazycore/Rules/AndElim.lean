@@ -2,26 +2,25 @@ import Lazycore.NDFormula
 import Lazycore.InferenceRule
 import Mathlib.Data.Multiset.Basic
 
+-- Left =======================================================================
+
 def InfrenceRule.AndElimLeft [DecidableEq α] (φ ψ : NDFormula α)
 (Γ : Multiset (NDFormula α)) :
 InfrenceRule α := 
-⟨[Γ ⊢ₛ φ ∧ₙ ψ], Γ ⊢ₛ φ, InfrenceRule.noRestrictions⟩
+[Γ ⊢ₛ φ ∧ₙ ψ] ⊢ᵢ Γ ⊢ₛ φ
 
-def InfrenceRule.AndElimRight [DecidableEq α] (φ ψ : NDFormula α)
-(Γ : Multiset (NDFormula α)) :
-InfrenceRule α := 
-⟨[Γ ⊢ₛ φ ∧ₙ ψ], Γ ⊢ₛ ψ, InfrenceRule.noRestrictions⟩
+alias InfrenceRule.AndElimLeft ← AndEₗ
 
 theorem InfrenceRule.AndElimLeft.Valid [DecidableEq α]
 (φ ψ : NDFormula α) (Γ : Multiset (NDFormula α)) :
-⊨ᵢ (InfrenceRule.AndElimLeft φ ψ Γ) :=
+⊨ᵢ AndEₗ φ ψ Γ :=
 by{
   unhygienic
   rw [InfrenceRule.valid];
   intros i;
   rw [InfrenceRule.sat];
   intros s inp;
-  rw [AndElimLeft] at *;
+  rw [AndEₗ, InfrenceRule.AndElimLeft] at *;
   simp at *;
   rw [Sequent.sat] at *;
   intros H;
@@ -32,16 +31,25 @@ by{
   exact left;
 }
 
+-- Right =======================================================================
+
+def InfrenceRule.AndElimRight [DecidableEq α] (φ ψ : NDFormula α)
+(Γ : Multiset (NDFormula α)) :
+InfrenceRule α := 
+[Γ ⊢ₛ φ ∧ₙ ψ] ⊢ᵢ Γ ⊢ₛ ψ
+
+alias InfrenceRule.AndElimRight ← AndEᵣ
+
 theorem InfrenceRule.AndElimRight.Valid [DecidableEq α] 
 (φ ψ : NDFormula α) (Γ : Multiset (NDFormula α)) :
-⊨ᵢ (InfrenceRule.AndElimRight φ ψ Γ) :=
+⊨ᵢ AndEᵣ φ ψ Γ :=
 by{
   unhygienic
   rw [InfrenceRule.valid];
   intros i;
   rw [InfrenceRule.sat];
   intros s inp;
-  rw [AndElimRight] at *;
+  rw [AndEᵣ, InfrenceRule.AndElimRight] at *;
   simp at *;
   rw [Sequent.sat] at *;
   intros H;
